@@ -94,6 +94,57 @@ func Get(URL string, options interface{}) (Sitemap, error) {
 	return smap, nil
 }
 
+//AddFileToURL append all URLs that exists in local file and does not exists in remote file
+func AddFileToURL(xmlLocalFile, xmlURL, outputFile string) error {
+	localSmap, err := GetFromFile(xmlLocalFile, nil)
+	if err != nil {
+		return err
+	}
+	remoteSmap, err := Get(xmlURL, nil)
+	remoteURLs := make(map[string]bool)
+	for _, remoteURL := range remoteSmap.URL {
+		remoteURLs[remoteURL.Loc] = true
+	}
+	for _, localURL := range localSmap.URL {
+		if !remoteURLs[localURL.Loc] {
+			remoteSmap.URL = append(remoteSmap.URL, localURL)
+		}
+	}
+	xmlNewData, err := xml.MarshalIndent(remoteSmap, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(outputFile, xmlNewData, 0644)
+}
+
+//GetFromFile read from local file
+func GetFromFile(xmlpath string, options interface{}) (Sitemap, error) {
+	data, err := ioutil.ReadFile(xmlpath)
+	if err != nil {
+		return Sitemap{}, err
+	}
+	idx, idxErr := ParseIndex(data)
+	smap, smapErr := Parse(data)
+
+	if idxErr != nil && smapErr != nil {
+		if idxErr != nil {
+			err = idxErr
+		} else {
+			err = smapErr
+		}
+		return Sitemap{}, fmt.Errorf("URL is not a sitemap or sitemapindex.: %v", err)
+	} else if idxErr != nil {
+		return smap, nil
+	}
+
+	smap, err = idx.get(options, false)
+	if err != nil {
+		return Sitemap{}, err
+	}
+
+	return smap, nil
+}
+
 /*
 ForceGet is fetch and parse sitemap.xml/sitemapindex.xml.
 The difference with the Get function is that it ignores some errors.

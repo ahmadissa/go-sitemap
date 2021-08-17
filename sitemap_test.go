@@ -2,6 +2,7 @@ package sitemap
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +35,22 @@ var getTests = []getTest{
 	{"contains_not_exist_sitemap_sitemapindex.xml", 0, true, "failed to parse http://HOST/not_exist_sitemap.xml in sitemapindex.xml.: EOF"},
 }
 
+func TestAddFileToURL(t *testing.T) {
+	server := testServer()
+	defer server.Close()
+	err := AddFileToURL("./testdata/sitemap-plus-one.xml", server.URL+"/sitemap-minusone.xml", "sitemap.xml")
+	if err != nil {
+		t.Error(err)
+	}
+	smap, err := GetFromFile("sitemap.xml", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(smap.URL) != 14 {
+		t.Error("Should have 14 URLs", "got", len(smap.URL))
+	}
+	os.Remove("sitemap.xml")
+}
 func TestGet(t *testing.T) {
 	server := testServer()
 	defer server.Close()
@@ -123,6 +140,30 @@ func TestForceGet(t *testing.T) {
 	}
 }
 
+func TestGetFromFile(t *testing.T) {
+	t.Run("sitemap.xml exists", func(t *testing.T) {
+		smap, err := GetFromFile("./testdata/sitemap.xml", nil)
+		if err != nil {
+			t.Errorf("GetFromFile() should not return error. result:%v", err)
+		}
+
+		if len(smap.URL) != 13 {
+			t.Errorf("GetFromFile() should return Sitemap.URL. result:%d expected:%d", 13, len(smap.URL))
+		}
+	})
+
+	t.Run("sitemap.xml not exists", func(t *testing.T) {
+		smap, err := GetFromFile("./testdata/notfound.xml", nil)
+
+		if err.Error() != "open ./testdata/notfound.xml: no such file or directory" {
+			t.Errorf("GetFromFile() should return error. result:%s expected:%s", err.Error(), "open ./testdata/notfound.xml: no such file or directory")
+		}
+
+		if len(smap.URL) != 0 {
+			t.Errorf("GetFromFile() should return Sitemap.URL. result:%d expected:%d", 0, len(smap.URL))
+		}
+	})
+}
 func TestParse(t *testing.T) {
 	t.Run("sitemap.xml exists", func(t *testing.T) {
 		data, _ := ioutil.ReadFile("./testdata/sitemap.xml")
