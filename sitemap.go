@@ -105,11 +105,22 @@ func AddFileToURL(xmlLocalFile, xmlURL, outputFile string) error {
 	for _, remoteURL := range remoteSmap.URL {
 		remoteURLs[remoteURL.Loc] = true
 	}
+	localURLs := make(map[string]bool)
 	for _, localURL := range localSmap.URL {
-		if !remoteURLs[localURL.Loc] {
-			remoteSmap.URL = append(remoteSmap.URL, localURL)
+		localURLs[localURL.Loc] = true
+	}
+	syncedURLs := []URL{}
+	for _, remoteURL := range remoteSmap.URL {
+		if localURLs[remoteURL.Loc] {
+			syncedURLs = append(syncedURLs, remoteURL)
 		}
 	}
+	for _, localURL := range localSmap.URL {
+		if !remoteURLs[localURL.Loc] {
+			syncedURLs = append(syncedURLs, localURL)
+		}
+	}
+	remoteSmap.URL = syncedURLs
 	xmlNewData, err := xml.MarshalIndent(remoteSmap, "", " ")
 	if err != nil {
 		return err
