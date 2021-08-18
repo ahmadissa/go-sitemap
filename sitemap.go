@@ -22,6 +22,7 @@ type parts struct {
 
 // Sitemap is a structure of <sitemap>
 type Sitemap struct {
+	Xmlns   string   `xml:"xmlns,attr"`
 	XMLName xml.Name `xml:"urlset"`
 	URL     []URL    `xml:"url"`
 }
@@ -125,6 +126,7 @@ func AddFileToURL(xmlLocalFile, xmlURL, outputFile string) error {
 	if err != nil {
 		return err
 	}
+	xmlNewData = []byte(xml.Header + string(xmlNewData))
 	return ioutil.WriteFile(outputFile, xmlNewData, 0644)
 }
 
